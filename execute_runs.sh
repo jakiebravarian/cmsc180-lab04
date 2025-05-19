@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # === CONFIG ===
-N=25000              # Matrix size
+N=20000           # Matrix size
 T=2               # Number of threads/slaves
 C=0               # Core-affined? 0 = no, 1 = yes
-BASE_PORT=5000    # Starting port
+BASE_PORT=28030   # Starting port
 EXEC=./a.out      # Compiled binary
 CONFIG="config_${T}.cfg"
 
