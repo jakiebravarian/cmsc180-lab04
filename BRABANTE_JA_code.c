@@ -81,6 +81,12 @@ void record_experiment(char *filename, int n, int t, int c, double runtime);
 
 int main(int argc, char *argv[]) {
 
+    if (argc != 6) {
+        fprintf(stderr, "❌ Error: Invalid number of arguments.\n");
+        fprintf(stderr, "Usage: %s <n> <port> <status (0=master, 1=slave)> <threads> <core-affinity (0/1)>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
     //  Read input from command line 
     int n = atoi(argv[1]);      //  n size of matrix
     int p = atoi(argv[2]);      //  port number
@@ -96,8 +102,8 @@ int main(int argc, char *argv[]) {
 
     //  Read IP Addresses and Port Numbers in Config File
     char filename[255];
-    sprintf(filename, "../localconfig/config_%d.cfg", t);
-    // sprintf(filename, "../droneconfig/config_%d.cfg", t);
+    sprintf(filename, "localconfig/config_%d.cfg", t);
+    // sprintf(filename, "droneconfig/config_%d.cfg", t);
     printf("READING FROM CONFIG FILE: %s\n", filename);
 
     FILE *file = fopen(filename, "r");
@@ -135,12 +141,16 @@ int main(int argc, char *argv[]) {
     //  Run slave process -------------------------------------------------------------------------
     int index = (p - slave_addresses[0]->port) % t;
     slave(n, p, t, c, master_address, slave_addresses[index]);
-
-    for (int i = 0; i < num_slaves; i++) {
-        free(slave_addresses[i]->ip);
-        free(slave_addresses[i]);
+    
+    // Cleanup
+    if (s == 0) {
+        for (int i = 0; i < num_slaves; i++) {
+            free(slave_addresses[i]->ip);
+            free(slave_addresses[i]);
+        }
+        free(slave_addresses);
     }
-    free(slave_addresses);
+
     free(master_address->ip);
     free(master_address);
 
@@ -464,8 +474,8 @@ void record_experiment(char *filename, int n, int t, int c, double runtime) {
     char pretty_filename[256];
 
     // Build filenames
-    snprintf(tsv_filename, sizeof(tsv_filename), "../util/%s.tsv", filename);
-    snprintf(pretty_filename, sizeof(pretty_filename), "../util/%s_pretty.txt", filename);
+    snprintf(tsv_filename, sizeof(tsv_filename), "util/%s.tsv", filename);
+    snprintf(pretty_filename, sizeof(pretty_filename), "util/%s_pretty.txt", filename);
 
     FILE *tsv_file;
     FILE *pretty_file;

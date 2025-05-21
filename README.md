@@ -18,6 +18,23 @@ This activity demonstrates the use of **POSIX threads**, **core affinity**, and 
 - Threading & Core Affinity: `pthread.h`, `sched.h`  
 - Compiler must support GNU extensions (`#define _GNU_SOURCE`)
 
+## Folder Structure
+```
+root/
+├── a.out
+├── Makefile
+├── BRABANTE_JA_code.c
+├── README.md
+├── droneconfig/ # Stores actual config files with drone IPs
+│ └── config_<T>.cfg
+├── localconfig/ # Stores config files for local/localhost testing
+│ └── config_<T>.cfg
+├── util/ # Contains helper scripts and IP list
+│ ├── generate_configs.sh
+│ ├── execute_runs.sh
+│ └── ip_list.txt
+```
+
 ## Source Code  
 - Filename: `BRABANTE_JA_code.c`
 
@@ -29,30 +46,42 @@ Type one of the following commands in the terminal:
 - **`make`**  
   Compiles the program into an executable named `a.out`.
 
+- **`make generate`**  
+  Runs `util/generate_configs.sh` which:
+  - Reads `ip_list.txt` to build config files
+  - Creates `config_T.cfg` for each `T` (2, 4, 8, 16) inside `droneconfig/`
+
 - **`make execute`**  
-  Runs the script `execute_runs.sh`, which automatically:
+  Runs `util/execute_runs.sh`, which:
   - Launches `T` slave terminals followed by the master
   - Assigns different ports to each thread
-  - Uses the corresponding config file `config_T.cfg`
+  - Uses the corresponding config file from either `droneconfig/` or `localconfig/`
 
 - **`make clean`**  
   Deletes the compiled output file `a.out`.
 
 ### **Using the Bash Script (`execute_runs.sh`)**  
-This script automates the launch of slave and master processes using `gnome-terminal`.  
-Adjustable parameters in the script:
+Inside `util/execute_runs.sh`, you can configure:
 - `N`: matrix size (e.g., 25000)
 - `T`: number of slave threads (e.g., 2, 4, 8)
-- `C`: enable core affinity (`0` = no, `1` = yes)
-- `BASE_PORT`: port to begin assigning from (e.g., 5000)
+- `C`: core affinity flag (`0` = disabled, `1` = enabled)
+- `BASE_PORT`: port to begin assigning from (e.g., 28030)
+
+The script opens one terminal per slave and finally runs the master.
+
+> Requires `gnome-terminal` to be installed on your system.
+
 
 ## Output  
-- **Terminal**: Displays socket setup, thread-core mapping (if enabled), matrix transmission logs, and timing for distribution.
-- **Files**:
-  - `Exer4Results.tsv`: machine-readable log of runtime and parameters  
-  - `Exer4Results_pretty.txt`: human-readable, aligned table of results
+- **Terminal**: Shows process logs, connection status, and matrix send/receive debug info.
+- **Files (Saved inside `../util/`)**:
+  - `Exer4Results.tsv`: raw runtime log for data analysis
+  - `Exer4Results_pretty.txt`: human-readable formatted table of results
 
-> **Note:** `gnome-terminal` must be installed for this to work.
+## Special Mode
+If `n == 15`, the program uses **dummy matrix data** for easier visual validation.  
+All data sent and received will be printed for debugging purposes.
 
-If `n == 15`, the program loads predefined dummy data to allow easy validation of data transmission.  
-The matrix and received submatrices are printed on the console for inspection.
+## Notes
+- Ensure config files (`config_<T>.cfg`) are generated via `make generate` **before** running `make execute`.
+- All drones (or localhost instances) listed in `ip_list.txt` must be accessible via SSH and network.
