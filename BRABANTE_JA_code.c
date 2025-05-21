@@ -96,7 +96,8 @@ int main(int argc, char *argv[]) {
 
     //  Read IP Addresses and Port Numbers in Config File
     char filename[255];
-    sprintf(filename, "config_%d.cfg", t);
+    sprintf(filename, "../localconfig/config_%d.cfg", t);
+    // sprintf(filename, "../droneconfig/config_%d.cfg", t);
     printf("READING FROM CONFIG FILE: %s\n", filename);
 
     FILE *file = fopen(filename, "r");
@@ -463,8 +464,8 @@ void record_experiment(char *filename, int n, int t, int c, double runtime) {
     char pretty_filename[256];
 
     // Build filenames
-    snprintf(tsv_filename, sizeof(tsv_filename), "%s.tsv", filename);
-    snprintf(pretty_filename, sizeof(pretty_filename), "%s_pretty.txt", filename);
+    snprintf(tsv_filename, sizeof(tsv_filename), "../util/%s.tsv", filename);
+    snprintf(pretty_filename, sizeof(pretty_filename), "../util/%s_pretty.txt", filename);
 
     FILE *tsv_file;
     FILE *pretty_file;

@@ -6,7 +6,7 @@ T=2               # Number of threads/slaves
 C=0               # Core-affined? 0 = no, 1 = yes
 BASE_PORT=28030   # Starting port
 EXEC=./a.out      # Compiled binary
-CONFIG="config_${T}.cfg"
+CONFIG="../localconfig/config_${T}.cfg"
 
 # === Start Slaves First ===
 for ((i=1; i<=T; i++)); do
