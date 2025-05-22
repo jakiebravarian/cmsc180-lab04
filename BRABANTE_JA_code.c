@@ -352,6 +352,12 @@ SocketConnection *connectToServer(const char *ip, int port)
         handleError("Invalid address / Address not supported");
 
     // Connect to the server
+
+    // ----------------------------
+    int buf_size = 2 * KB * KB;
+    setsockopt(conn->sockfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+    setsockopt(conn->sockfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+
     if (connect(conn->sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0)
         handleError("Connection Failed");
 
@@ -386,6 +392,11 @@ SocketConnection *initializeServerSocket(const char *ip, int port)
         handleError("Failed to listen on socket");
     printf("Server socket is now listening for connections...\n");
 
+    // ----------------------------
+    int buf_size = 2 * KB * KB;
+    setsockopt(conn->sockfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+    setsockopt(conn->sockfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+
     conn->addr_len = sizeof(client_addr);
     conn->connfd = accept(conn->sockfd, (struct sockaddr *)&client_addr, &conn->addr_len);
     if (conn->connfd < 0)
@@ -404,14 +415,27 @@ void sendData(double **matrix, int n, int start_index, int end_index, int sockfd
     write(sockfd, matrix_info, sizeof(matrix_info));
 
     // Send matrix data row by row
-    for (int i = start_index; i < end_index; i++)
-    {
-        send(sockfd, matrix[i], n * sizeof(double), 0);
-    }
+    // for (int i = start_index; i < end_index; i++)
+    // {
+    //     send(sockfd, matrix[i], n * sizeof(double), 0);
+    // }
 
-    // Optionally send additional data or a simple confirmation message
-    char *ack = "Data Sent";
-    send(sockfd, ack, strlen(ack), 0);
+    int num_rows = end_index - start_index;
+    size_t chunk_size = num_rows * sizeof(double) * n;
+    double *buffer = malloc(chunk_size);
+
+    for (int i = 0; i < num_rows; i++)
+    {
+        memcpy(buffer + i * n, matrix[start_index + i], n * sizeof(double));
+    }
+    if (send(sockfd, buffer, chunk_size, 0) == -1)
+    {
+        perror("Failed to send matrix data");
+        free(buffer);
+        return;
+    }
+    printf("Matrix data sent successfully. Sent %d rows (%zu bytes total)\n", num_rows, chunk_size);
+    free(buffer);
 }
 
 void receiveData(int connfd, data_args_t *data, const char *ip, int port)
@@ -427,22 +451,38 @@ void receiveData(int connfd, data_args_t *data, const char *ip, int port)
 
     data->matrix = malloc(rows_to_receive * sizeof(double *));
 
+    // for (int i = 0; i < rows_to_receive; i++)
+    // {
+    //     data->matrix[i] = malloc(data->n * sizeof(double));
+
+    //     if (recv(connfd, data->matrix[i], data->n * sizeof(double), MSG_WAITALL) != data->n * sizeof(double))
+    //     {
+    //         perror("Failed to receive complete matrix row");
+    //         // Free all rows and the matrix
+    //         for (int j = 0; j <= i; j++)
+    //         {
+    //             free(data->matrix[j]);
+    //         }
+    //         free(data->matrix);
+    //         return;
+    //     }
+    // }
+
+    size_t chunk_size = rows_to_receive * sizeof(double) * data->n;
+    double *buffer = malloc(chunk_size);
+    if (recv(connfd, buffer, chunk_size, MSG_WAITALL) != chunk_size)
+    {
+        perror("Failed to receive complete matrix data");
+        free(buffer);
+        return;
+    }
     for (int i = 0; i < rows_to_receive; i++)
     {
         data->matrix[i] = malloc(data->n * sizeof(double));
-
-        if (recv(connfd, data->matrix[i], data->n * sizeof(double), MSG_WAITALL) != data->n * sizeof(double))
-        {
-            perror("Failed to receive complete matrix row");
-            // Free all rows and the matrix
-            for (int j = 0; j <= i; j++)
-            {
-                free(data->matrix[j]);
-            }
-            free(data->matrix);
-            return;
-        }
+        memcpy(data->matrix[i], buffer + i * data->n, data->n * sizeof(double));
     }
+    free(buffer);
+    printf("Matrix data received successfully.\n");
 
     // For verification of submatrix received
     if (data->n <= 15)
@@ -452,7 +492,7 @@ void receiveData(int connfd, data_args_t *data, const char *ip, int port)
     }
 
     // Send acknowledgment back to the master
-    send(connfd, "ack", 3, 0);
+    // send(connfd, "ack", 3, 0);
     printf("Acknowledgment sent to master from %s:%d\n", ip, port);
 }
 
