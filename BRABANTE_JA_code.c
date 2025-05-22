@@ -421,7 +421,7 @@ void sendData(double **matrix, int n, int start_index, int end_index, int sockfd
 
     if (!row_buffer) handleError("Failed to allocate row buffer");
 
-    size_t total_bytes_sent = 0
+    size_t total_bytes_sent = 0;
 
     for (int i = 0; i < num_rows; i++) {
         memcpy(row_buffer, matrix[start_index + i], row_bytes);
