@@ -358,6 +358,12 @@ SocketConnection *connectToServer(const char *ip, int port)
     setsockopt(conn->sockfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
     setsockopt(conn->sockfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
 
+    int actual_sndbuf, actual_rcvbuf;
+    socklen_t optlen = sizeof(int);
+    getsockopt(conn->sockfd, SOL_SOCKET, SO_SNDBUF, &actual_sndbuf, &optlen);
+    getsockopt(conn->sockfd, SOL_SOCKET, SO_RCVBUF, &actual_rcvbuf, &optlen);
+    printf("[connectToServer] Actual send buffer: %d bytes, receive buffer: %d bytes\n", actual_sndbuf, actual_rcvbuf);
+
     if (connect(conn->sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0)
         handleError("Connection Failed");
 
@@ -396,6 +402,12 @@ SocketConnection *initializeServerSocket(const char *ip, int port)
     int buf_size = 2 * KB * KB;
     setsockopt(conn->sockfd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
     setsockopt(conn->sockfd, SOL_SOCKET, SO_RCVBUF, &buf_size, sizeof(buf_size));
+
+    int actual_sndbuf, actual_rcvbuf;
+    socklen_t optlen = sizeof(int);
+    getsockopt(conn->sockfd, SOL_SOCKET, SO_SNDBUF, &actual_sndbuf, &optlen);
+    getsockopt(conn->sockfd, SOL_SOCKET, SO_RCVBUF, &actual_rcvbuf, &optlen);
+    printf("[initializeServerSocket] Actual send buffer: %d bytes, receive buffer: %d bytes\n", actual_sndbuf, actual_rcvbuf);
 
     conn->addr_len = sizeof(client_addr);
     conn->connfd = accept(conn->sockfd, (struct sockaddr *)&client_addr, &conn->addr_len);
