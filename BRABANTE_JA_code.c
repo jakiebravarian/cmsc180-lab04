@@ -414,28 +414,34 @@ void sendData(double **matrix, int n, int start_index, int end_index, int sockfd
     int matrix_info[] = {start_index, end_index, n};
     write(sockfd, matrix_info, sizeof(matrix_info));
 
-    // Send matrix data row by row
-    // for (int i = start_index; i < end_index; i++)
-    // {
-    //     send(sockfd, matrix[i], n * sizeof(double), 0);
-    // }
-
     int num_rows = end_index - start_index;
-    size_t chunk_size = num_rows * sizeof(double) * n;
-    double *buffer = malloc(chunk_size);
+    size_t row_bytes = n * sizeof(double);
+    size_t chunk_size = 4096; // 4KB
+    char *row_buffer = malloc(row_bytes);
 
-    for (int i = 0; i < num_rows; i++)
-    {
-        memcpy(buffer + i * n, matrix[start_index + i], n * sizeof(double));
+    if (!row_buffer) handleError("Failed to allocate row buffer");
+
+    size_t total_bytes_sent = 0
+
+    for (int i = 0; i < num_rows; i++) {
+        memcpy(row_buffer, matrix[start_index + i], row_bytes);
+
+        size_t bytes_sent = 0;
+        while (bytes_sent < row_bytes) {
+            ssize_t sent = send(sockfd, row_buffer + bytes_sent, 
+                                (row_bytes - bytes_sent > chunk_size ? chunk_size : row_bytes - bytes_sent), 0);
+            if (sent == -1) {
+                perror("Failed to send matrix row");
+                free(row_buffer);
+                return;
+            }
+            bytes_sent += sent;
+        }
+        total_bytes_sent += bytes_sent;
     }
-    if (send(sockfd, buffer, chunk_size, 0) == -1)
-    {
-        perror("Failed to send matrix data");
-        free(buffer);
-        return;
-    }
-    printf("Matrix data sent successfully. Sent %d rows (%zu bytes total)\n", num_rows, chunk_size);
-    free(buffer);
+
+    free(row_buffer);
+    printf("Matrix data sent successfully. Sent %d rows (%.2f KB total)\n", num_rows, total_bytes_sent / 1024.0);
 }
 
 void receiveData(int connfd, data_args_t *data, const char *ip, int port)
@@ -443,46 +449,43 @@ void receiveData(int connfd, data_args_t *data, const char *ip, int port)
 
     //  Get matrix info ---------------------------------------------------------------------------
     int matrix_info[3];
-    read(connfd, matrix_info, sizeof(matrix_info));
+    if (read(connfd, matrix_info, sizeof(matrix_info)) <= 0) handleError("Failed to receive matrix metadata");
+    
     int rows_to_receive = matrix_info[1] - matrix_info[0];
     data->n = matrix_info[2];
     data->start_index = matrix_info[0];
     data->end_index = matrix_info[1];
 
     data->matrix = malloc(rows_to_receive * sizeof(double *));
+    if (!data->matrix) handleError("Failed to allocate matrix pointer array");
 
-    // for (int i = 0; i < rows_to_receive; i++)
-    // {
-    //     data->matrix[i] = malloc(data->n * sizeof(double));
+    size_t row_bytes = data->n * sizeof(double);
+    size_t chunk_size = 4096;
+    char *row_buffer = malloc(row_bytes);
 
-    //     if (recv(connfd, data->matrix[i], data->n * sizeof(double), MSG_WAITALL) != data->n * sizeof(double))
-    //     {
-    //         perror("Failed to receive complete matrix row");
-    //         // Free all rows and the matrix
-    //         for (int j = 0; j <= i; j++)
-    //         {
-    //             free(data->matrix[j]);
-    //         }
-    //         free(data->matrix);
-    //         return;
-    //     }
-    // }
+    if (!row_buffer) handleError("Failed to allocate receive buffer");
 
-    size_t chunk_size = rows_to_receive * sizeof(double) * data->n;
-    double *buffer = malloc(chunk_size);
-    if (recv(connfd, buffer, chunk_size, MSG_WAITALL) != chunk_size)
-    {
-        perror("Failed to receive complete matrix data");
-        free(buffer);
-        return;
+    for (int i = 0; i < rows_to_receive; i++) {
+        size_t bytes_received = 0;
+        while (bytes_received < row_bytes) {
+            ssize_t r = recv(connfd, row_buffer + bytes_received,
+                             (row_bytes - bytes_received > chunk_size ? chunk_size : row_bytes - bytes_received), 0);
+            if (r <= 0) {
+                perror("Failed to receive complete matrix row");
+                for (int j = 0; j < i; j++) free(data->matrix[j]);
+                free(data->matrix);
+                free(row_buffer);
+                return;
+            }
+            bytes_received += r;
+        }
+
+        data->matrix[i] = malloc(row_bytes);
+        memcpy(data->matrix[i], row_buffer, row_bytes);
     }
-    for (int i = 0; i < rows_to_receive; i++)
-    {
-        data->matrix[i] = malloc(data->n * sizeof(double));
-        memcpy(data->matrix[i], buffer + i * data->n, data->n * sizeof(double));
-    }
-    free(buffer);
-    printf("Matrix data received successfully.\n");
+    
+    free(row_buffer);
+    printf("Matrix data received successfully from %s:%d\n", ip, port);
 
     // For verification of submatrix received
     if (data->n <= 15)

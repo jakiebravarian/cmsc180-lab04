@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # === CONFIG ===
-N=15                 # Matrix size
-T=16                  # Total number of threads/slaves
+N=20000                 # Matrix size
+T=4                  # Total number of threads/slaves
 C=0                  # Core-affined? 0 = no, 1 = yes
 BASE_PORT=28030      # Starting port
 EXEC=./a.out         # Compiled binary
@@ -51,6 +51,7 @@ SESSION_NAME="lab_slaves"
 
 # === Kill old tmux session if it exists ===
 tmux kill-session -t $SESSION_NAME 2>/dev/null
+# tmux kill-session -t lab_slaves
 
 # === Start a new tmux session ===
 tmux new-session -d -s $SESSION_NAME
