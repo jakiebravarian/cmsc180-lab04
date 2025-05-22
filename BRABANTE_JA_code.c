@@ -107,8 +107,8 @@ int main(int argc, char *argv[])
 
     //  Read IP Addresses and Port Numbers in Config File
     char filename[255];
-    sprintf(filename, "localconfig/config_%d.cfg", t);
-    // sprintf(filename, "droneconfig/config_%d.cfg", t);
+    // sprintf(filename, "localconfig/config_%d.cfg", t);
+    sprintf(filename, "droneconfig/config_%d.cfg", t);
     printf("READING FROM CONFIG FILE: %s\n", filename);
 
     FILE *file = fopen(filename, "r");
@@ -379,7 +379,7 @@ SocketConnection *initializeServerSocket(const char *ip, int port)
     struct sockaddr_in client_addr;
     struct sockaddr_in server_addr = {0};
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(ip);
+    server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(port);
 
     // Bind socket
