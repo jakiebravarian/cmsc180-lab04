@@ -468,7 +468,7 @@ double **createMatrix(int n)
         for (int i = 0; i < n; i++)
         {
             for (int j = 0; j < n; j++)
-                matrix[j][i] = values[j];
+                matrix[i][j] = values[j];
         }
     }
     else
@@ -476,7 +476,7 @@ double **createMatrix(int n)
         for (int i = 0; i < n; i++)
         {
             for (int j = 0; j < n; j++)
-                matrix[j][i] = (double)(rand() % 100 + 1);
+                matrix[i][j] = (double)(rand() % 100 + 1);
         }
     }
 
